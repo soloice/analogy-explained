@@ -38,9 +38,11 @@ class AffineFitter(object):
 
     def self_test(self, n=16, m=10, noise_strength=1e-4, learning_rate=5e-2, l2_weight=0.0, eps=1e-5, max_iter=100000):
         X = np.random.random((n, m))
-        A = np.eye(m) + np.random.random((m, m)) * noise_strength
+        A = np.random.random((m, m))
         b = np.random.random((m, 1))
         Y = (np.dot(A, X.T) + b).T
+        for i in range(len(Y)):
+            Y[i] += np.random.random(m) * noise_strength
 
         print("Test ONE:")
         A_hat, b_hat = self.fit(X, Y, learning_rate=learning_rate, l2=l2_weight, my_eps=eps, max_iter=max_iter)
@@ -53,19 +55,5 @@ class AffineFitter(object):
 
 if __name__ == "__main__":
     af = AffineFitter()
-    # Test result for following configurations:
-    # At iteration 14980, loss = 2.4095005094208074e-05, diff = 2.4095005094208074e-05
-    # Determinants of A and A_hat: 1.16168002466 1.16615431378
-    # Relative error of A:  0.00487697217477
-    # Relative error of b:  0.0114382339432
-    # [ 0.10708961  0.79909617  0.40663504  0.09726528  0.16478876  0.56910257
-    # 0.6913642 0.26271432 0.23732742 0.18553165]
-    # [ 0.10281192  0.7942689   0.40109433  0.09706571  0.16095737  0.5628238
-    # 0.68519551 0.25938941 0.23081688 0.1811335]
     af.self_test(n=16, m=10, noise_strength=0.0005, learning_rate=5e-2, l2_weight=0.0, eps=1e-7, max_iter=50000)
-
-    # Test result for following configurations:
-    # Determinants of A and A_hat: 1.00469477459 1.05529093467
-    # Relative error of A:  0.0141621319636
-    # Relative error of b:  0.0498766309302
     af.self_test(n=103, m=50, noise_strength=1e-4, learning_rate=2e-2, l2_weight=0.0, eps=1e-7, max_iter=1000000)

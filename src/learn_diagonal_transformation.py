@@ -38,7 +38,7 @@ class DiagonalFitter(object):
 
     def self_test(self, n=16, m=10, noise_strength=1e-4, learning_rate=5e-2, l2_weight=0.0, eps=1e-5, max_iter=100000):
         X = np.random.random((n, m))
-        d = np.ones(m) + np.random.random(m) * noise_strength
+        d = np.random.random(m)
         b = np.random.random(m)
         Y = d * X + b
         for i in range(len(Y)):
