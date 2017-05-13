@@ -3,7 +3,7 @@ import numpy as np
 
 class AffineFitter(object):
     """Give two n-by-m matrices X and Y, where n is # of samples, m is # of features.
-        Find a best (A, b) pair such that A * X.T + b is closest to Y.T measured by MSE.
+        Find a best (A, b) pair such that MSE of 1/n * np.linalg.norm(np.dot(A, X.T) + b) ** 2 is minimized.
     """
 
     def __init__(self):
@@ -17,7 +17,7 @@ class AffineFitter(object):
         diff = self.A.dot(X.T) + self.b - Y.T
         print("=" * 100)
         print("l2 regularization: ", l2)
-        loss = np.linalg.norm(diff) ** 2 + l2 * np.linalg.norm(self.A - I) ** 2
+        loss = np.linalg.norm(diff) ** 2 / n + l2 * np.linalg.norm(self.A - I) ** 2
         print("loss = ", loss)
         previous_loss = loss + 1.0
         i = 0
@@ -29,36 +29,11 @@ class AffineFitter(object):
             self.b -= learning_rate * grad_b.reshape((m, 1))
             previous_loss = loss
             diff = self.A.dot(X.T) + self.b - Y.T
-            loss = np.linalg.norm(diff) ** 2 + l2 * np.linalg.norm(self.A - I) ** 2
+            loss = np.linalg.norm(diff) ** 2 / n + l2 * np.linalg.norm(self.A - I) ** 2
             i += 1
             if i % verbose == 1:
-                print("At iteration {0}, loss = {1}, diff = {2}".format(i, loss, np.linalg.norm(diff) ** 2))
-        print("At iteration {0}, loss = {1}, diff = {2}".format(i, loss, np.linalg.norm(diff) ** 2))
-        return self.A, self.b
-
-    def fit2(self, X, Y, learning_rate=5e-3, l2=1.0, my_eps=1e-4, max_iter=100000, verbose=500):
-        assert X.shape == Y.shape
-        n, m = X.shape
-        Ab = np.random.random((m, m+1)) # compress A, b into one matrix
-        X1 = np.c_[X, np.ones((n, 1))] # append an extra 1 as the last dimension of each sample X
-        I = np.eye(m)
-        diff = Ab.dot(X1.T) - Y.T
-        tolerance = my_eps * (np.sum(X * X) + np.sum(Y * Y))
-        print("tolerance = ", tolerance)
-        loss = np.linalg.norm(diff) ** 2 + l2 * np.linalg.norm(Ab[:, :-1] - I) ** 2
-        print("loss = ", loss)
-        i = 0
-        while np.linalg.norm(diff) ** 2 > tolerance and i < max_iter:
-            Ab -= learning_rate * 2.0 * diff.dot(X1) / n
-            Ab[:, :-1] -= learning_rate * 2.0 * l2 * (Ab[:, :-1] - I) # l2 regularization term
-            diff = Ab.dot(X1.T) - Y.T
-            loss = np.linalg.norm(diff) ** 2 + l2 * np.linalg.norm(Ab[:, :-1] - I) ** 2
-            i += 1
-            if i % verbose == 1:
-                print("At iteration {0}, loss = {1}, diff = {2}".format(i, loss, np.linalg.norm(diff) ** 2))
-        print("At iteration {0}, loss = {1}, diff = {2}".format(i, loss, np.linalg.norm(diff) ** 2))
-        self.A = Ab[:, :-1]
-        self.b = Ab[:, -1]
+                print("At iteration {0}, loss = {1}, diff = {2}".format(i, loss, np.linalg.norm(diff) ** 2 / n))
+        print("At iteration {0}, loss = {1}, diff = {2}".format(i, loss, np.linalg.norm(diff) ** 2 / n))
         return self.A, self.b
 
     def self_test(self, n=16, m=10, noise_strength=1e-4, learning_rate=5e-2, l2_weight=0.0, eps=1e-5, max_iter=100000):
@@ -75,17 +50,6 @@ class AffineFitter(object):
         b, b_hat = b.ravel(), b_hat.ravel()
         print(b)
         print(b_hat)
-
-        # print("Test TWO:")
-        # A_hat, b_hat = self.fit2(X, Y, learning_rate=learning_rate, l2=l2_weight, my_eps=eps, max_iter=max_iter)
-        # print("Determinants of A and A_hat:", np.linalg.det(A), np.linalg.det(A_hat))
-        # print("Relative error of A: ", np.linalg.norm(A - A_hat) / np.linalg.norm(A))
-        # print("Relative error of b: ", np.linalg.norm(b_hat - b) / np.linalg.norm(b))
-        # b, b_hat = b.ravel(), b_hat.ravel()
-        # print(b)
-        # print(b_hat)
-
-
 
 if __name__ == "__main__":
     af = AffineFitter()
