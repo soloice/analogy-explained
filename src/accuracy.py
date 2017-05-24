@@ -15,7 +15,7 @@ parser.add_argument("--l2_weight", help="l2 normalizer weight", default=1.0, typ
 args = parser.parse_args()
 
 emb = Embedding()
-emb.load_embeddings(args.embedding_file)
+emb.load_embeddings(args.embedding_file, normalize=True)
 qw = QuestionWords(args.analogy_file)
 pairs = list(filter(lambda pair: (pair[0] in emb.word2id) and (pair[1] in emb.word2id),
                     qw.question_words_pairs["capital-world"]))
@@ -39,7 +39,7 @@ print(average_dist(X))
 print(average_dist(Y))
 
 
-def test_fit_X_Y(X1, Y1, words_x1, words_y1, train_range=(0, -1), test_range=(0, -1), l2_reg=0.0):
+def test_fit_X_Y(X1, Y1, words_x1, words_y1, train_range=(0, -1), test_range=(0, -1), l2_reg=0.0, remove_outliers=True):
     if train_range[1] == -1:
         train_range = (train_range[0], len(X1))
     if test_range[1] == -1:
@@ -52,7 +52,13 @@ def test_fit_X_Y(X1, Y1, words_x1, words_y1, train_range=(0, -1), test_range=(0,
     b = b.ravel()
     print("Determinants of A_hat:", np.linalg.det(A))
     print("b_hat: ", b)
-    average_offset = np.mean(Y1 - X1, axis=0)
+    diff = Y1 - X1
+    average_offset = np.mean(diff, axis=0)
+    if remove_outliers:
+        # outlier_measure = np.sum((diff - average_offset)**2, axis=1)
+        outlier_measure = np.sum((diff) ** 2, axis=1)
+        indices_to_use = np.argsort(outlier_measure)[1:-1] # remove last outliers
+        average_offset = np.mean(diff[indices_to_use], axis=0)
 
     def add_label(w):
         if w in words_x1:
@@ -62,9 +68,8 @@ def test_fit_X_Y(X1, Y1, words_x1, words_y1, train_range=(0, -1), test_range=(0,
         else:
             return w
 
-
-    top1_accuracy_affine, top1_accuracy_offset, identity_prediction_affine = 0, 0, 0
-    top3_accuracy_affine, top3_accuracy_offset, identity_prediction_offset = 0, 0, 0
+    top1_accuracy_affine, top3_accuracy_affine, identity_prediction_affine = 0, 0, 0
+    top1_accuracy_offset, top3_accuracy_offset, identity_prediction_offset = 0, 0, 0
     # X1_test, Y1_test = X1[test_range[0]:test_range[1], :], Y1[test_range[0]:test_range[1], :]
     for i in range(test_range[0], test_range[1]):
         print(words_x1[i], words_y1[i])
@@ -104,15 +109,13 @@ def test_fit_X_Y(X1, Y1, words_x1, words_y1, train_range=(0, -1), test_range=(0,
 
 
 print("All data (overfit):")
-for l2_reg in [0.0, 0.001, 0.01, 0.1, 1.0]:
-    print("********************************")
-    test_fit_X_Y(X, Y, words_x, words_y, [0, -1], [0, -1], l2_reg)
-    print("================================")
-    test_fit_X_Y(Y, X, words_y, words_x, [0, -1], [0, -1], l2_reg)
+test_fit_X_Y(X, Y, words_x, words_y, [0, -1], [0, -1], l2_reg=0.0)
+print("================================")
+test_fit_X_Y(Y, X, words_y, words_x, [0, -1], [0, -1], l2_reg=0.0)
 
 print("Separate train/test data:")
 for l2_reg in [0.0, 0.001, 0.01, 0.1, 1.0]:
     print("********************************")
-    test_fit_X_Y(X, Y, words_x, words_y, [0, 40], [40, -1], l2_reg)
+    test_fit_X_Y(X, Y, words_x, words_y, [0, 30], [30, -1], l2_reg)
     print("================================")
-    test_fit_X_Y(Y, X, words_y, words_x, [0, 40], [40, -1], l2_reg)
+    test_fit_X_Y(Y, X, words_y, words_x, [0, 30], [30, -1], l2_reg)

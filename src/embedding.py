@@ -10,7 +10,7 @@ class Embedding(object):
         self.embedding_size = -1
         self.embedding_norm2 = None
 
-    def load_embeddings(self, embedding_file_name):
+    def load_embeddings(self, embedding_file_name, normalize=False):
         # load embedding from file `embedding_file_name`
         print("Load embeddings from {0}, which may take a few seconds...".format(embedding_file_name))
         with codecs.open(embedding_file_name, encoding="utf-8") as f:
@@ -26,6 +26,15 @@ class Embedding(object):
                 self.id2word[i] = token
                 self.embedding_matrix[i] = vector
             self.embedding_norm2 = np.sum(self.embedding_matrix ** 2, axis=1)
+            print("Embedding norm2 shape: ", self.embedding_norm2.shape)
+            # print("Embedding of </eos>", self.embedding_matrix[0])
+            # print("Squared norm: ", self.embedding_norm2)
+
+            if normalize:
+                self.embedding_matrix /= np.reshape(np.sqrt(self.embedding_norm2), [-1, 1])
+                self.embedding_norm2 = np.ones(self.embedding_norm2.shape)
+            # print("Embedding of </eos>", self.embedding_matrix[0])
+            # print("Squared norm: ", self.embedding_norm2)
         print("Finish loading.")
 
     def extract_embeddings(self, words):
@@ -57,6 +66,6 @@ class Embedding(object):
 
 if __name__ == "__main__":
     emb = Embedding()
-    emb.load_embeddings("../vectors-en/vec-text8-size50-win5-cbow-hs.txt")
+    emb.load_embeddings("../vectors-en/vec-text8-size50-win5-cbow-hs.txt", normalize=True)
     print(emb.extract_embeddings(["japan", "ottawa"]))
     print(emb.knn("japan"))
