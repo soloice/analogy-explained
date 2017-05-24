@@ -8,17 +8,17 @@ import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--embedding_file", help="embedding file name",
-                    default="../vectors-en/vec-text8-size100-win5-cbow-hs.txt")
+                    default="../vectors-en/vec-text8-size50-win5-cbow-hs.txt")
 parser.add_argument("--analogy_file", help="analogy corpus file name", default="../data/questions-words.txt")
 parser.add_argument("--learning_rate", help="learning rate", default=1e-2, type=float)
 parser.add_argument("--l2_weight", help="l2 normalizer weight", default=1.0, type=float)
 args = parser.parse_args()
 
 emb = Embedding()
-emb.load_embeddings(args.embedding_file)
+emb.load_embeddings(args.embedding_file, normalize=True)
 qw = QuestionWords(args.analogy_file)
 pairs = list(filter(lambda pair: (pair[0] in emb.word2id) and (pair[1] in emb.word2id),
-                    qw.question_words_pairs["city-in-state"]))
+                    qw.question_words_pairs["capital-world"]))
 print(pairs)
 words_x, words_y = zip(*pairs)
 print(len(words_x), words_x)
@@ -39,7 +39,7 @@ print(average_dist(X))
 print(average_dist(Y))
 
 
-def test_fit_X_Y(X1, Y1, words_x1, words_y1, train_range=(0, -1), test_range=(0, -1), l2_reg=0.0):
+def test_fit_X_Y(X1, Y1, words_x1, words_y1, train_range=(0, -1), test_range=(0, -1), l2_reg=0.0, remove_outliers=True):
     if train_range[1] == -1:
         train_range = (train_range[0], len(X1))
     if test_range[1] == -1:
@@ -52,7 +52,14 @@ def test_fit_X_Y(X1, Y1, words_x1, words_y1, train_range=(0, -1), test_range=(0,
     print("Determinants of d_hat:", np.prod(d))
     print("d_hat: ", d)
     print("b_hat: ", b)
-    average_offset = np.mean(Y1 - X1, axis=0)
+
+    diff = Y1 - X1
+    average_offset = np.mean(diff, axis=0)
+    if remove_outliers:
+        # outlier_measure = np.sum((diff - average_offset)**2, axis=1)
+        outlier_measure = np.sum((diff) ** 2, axis=1)
+        indices_to_use = np.argsort(outlier_measure)[1:-1]  # remove last outliers
+        average_offset = np.mean(diff[indices_to_use], axis=0)
 
     def add_label(w):
         if w in words_x1:
@@ -103,11 +110,9 @@ def test_fit_X_Y(X1, Y1, words_x1, words_y1, train_range=(0, -1), test_range=(0,
 
 
 print("All data (overfit):")
-for l2_reg in [0.0, 0.001, 0.01, 0.1, 1.0]:
-    print("********************************")
-    test_fit_X_Y(X, Y, words_x, words_y, [0, -1], [0, -1], l2_reg)
-    print("================================")
-    test_fit_X_Y(Y, X, words_y, words_x, [0, -1], [0, -1], l2_reg)
+test_fit_X_Y(X, Y, words_x, words_y, [0, -1], [0, -1], l2_reg=0.0)
+print("================================")
+test_fit_X_Y(Y, X, words_y, words_x, [0, -1], [0, -1], l2_reg=0.0)
 
 print("Separate train/test data:")
 for l2_reg in [0.0, 0.001, 0.01, 0.1, 1.0]:
